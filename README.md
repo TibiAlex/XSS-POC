@@ -1,70 +1,82 @@
-# Getting Started with Create React App
+XSS POC
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**Abstract**
 
-## Available Scripts
+Cross-Site Scripting (XSS) attacks are among the most prevalent and dangerous vulnerabilities in web applications, capable of compromising user data and site integrity. This paper explores the three primary types of XSS attacks: Reflective, Stored, and DOM-based. We analyze the encoding strategies attackers utilize to bypass browser security mechanisms and discuss effective mitigation techniques. Additionally, a detailed proof-of-concept implementation demonstrates the severity and practical implications of these vulnerabilities. The study concludes with the results of our experimentation and actionable insights to fortify web applications against XSS threats.
 
-In the project directory, you can run:
+**Introduction**
 
-### `npm start`
+XSS attacks exploit the trust that users place in a website by injecting malicious scripts that execute in the browser of an unsuspecting user. These scripts can steal sensitive information, hijack user sessions, or perform other malicious activities. The three main types of XSS attacks—Reflective, Stored, and DOM-based—leverage distinct mechanisms for script injection. Modern browsers employ various security measures, such as input sanitization and encoding, to mitigate these threats, but attackers continuously devise new methods to bypass these protections. This paper provides a comprehensive analysis of XSS attacks, highlighting their mechanisms, effects, and mitigation techniques.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**Related Work**
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Numerous studies and frameworks have focused on XSS vulnerabilities and countermeasures. Notable works include OWASP’s XSS Prevention Cheat Sheet, which outlines best practices for developers, and academic studies that explore automated tools for XSS detection. Prior research has predominantly emphasized either theoretical analyses or specific case studies. Our work builds on this foundation by providing a holistic view of XSS, including practical proof-of-concept implementations and an examination of emerging encoding strategies used to evade security mechanisms.
 
-### `npm test`
+**Attack Description**
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **Reflective XSS**
+   Reflective XSS occurs when malicious scripts are embedded in a URL parameter and immediately executed when the victim accesses the crafted URL. For example:
 
-### `npm run build`
+   ```
+   https://vulnerable-website.com/search?q=<script>alert('XSS')</script>
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+   The server reflects the malicious input back to the user’s browser without proper sanitization, leading to script execution.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. **Stored XSS**
+   Stored XSS involves injecting malicious scripts into a website’s database. When a user accesses the affected page, the script executes. For instance, an attacker might insert the following payload into a comment field:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   ```html
+   <script>document.cookie="stolen="+document.cookie</script>
+   ```
 
-### `npm run eject`
+   Every user who views the comment section inadvertently executes the malicious code.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. **DOM-based XSS**
+   DOM-based XSS arises when a web application manipulates the DOM using user-supplied data, resulting in script execution. An example is the improper handling of URL fragments:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   ```javascript
+   var input = location.hash.substring(1);
+   document.body.innerHTML = input;
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+   Visiting a URL like `https://example.com/#<script>alert('XSS')</script>` leads to script execution.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+**Encoding Strategies to Bypass Browser Security**
 
-## Learn More
+Attackers employ various encoding techniques to evade security mechanisms:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. **HTML Encoding**: Converting characters into their HTML entity equivalents (e.g., `<` to `&lt;`).
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+2. **URL Encoding**: Encoding payloads using percent-encoded characters (e.g., `<script>` as `%3Cscript%3E`).
 
-### Code Splitting
+3. **Double Encoding**: Applying multiple layers of encoding to obfuscate payloads (e.g., `%253Cscript%253E`).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+4. **Base64 Encoding**: Encoding scripts in Base64 and decoding them dynamically using JavaScript.
 
-### Analyzing the Bundle Size
+5. **Obfuscation via Comments**: Injecting malicious code with obfuscated syntax, such as using comments to break detection patterns (e.g., `<sc<!-- -->ript>`).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+**Effects and Attack Mitigation**
 
-### Making a Progressive Web App
+XSS attacks can result in identity theft, data breaches, and reputational damage for web applications. Effective mitigation strategies include:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- **Input Validation**: Restricting allowed input formats using whitelists.
+- **Output Encoding**: Escaping special characters in user-supplied data before rendering.
+- **Content Security Policy (CSP)**: Defining rules to restrict the execution of scripts from untrusted sources.
+- **Secure JavaScript Practices**: Avoiding direct DOM manipulation with user input.
+- **Web Application Firewalls (WAFs)**: Detecting and blocking malicious payloads.
 
-### Advanced Configuration
+**Proof-of-Concept Description and Implementation**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+A proof-of-concept attack was developed to demonstrate the impact of each XSS type:
 
-### Deployment
+1. **Reflective XSS**: A crafted URL was used to execute a script that displayed an alert box.
+2. **Stored XSS**: A malicious payload was injected into a comment field, causing all viewers of the comment section to execute the script.
+3. **DOM-based XSS**: A URL fragment was manipulated to exploit a vulnerable client-side script, resulting in an alert box.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+These attacks were executed in a controlled environment with intentionally vulnerable web applications to measure their feasibility and impact.
 
-### `npm run build` fails to minify
+**Results**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Our proof-of-concept demonstrated the ease with which each type of XSS could compromise a vulnerable application. Encoding strategies significantly enhanced the ability of payloads to bypass basic security measures, underscoring the importance of robust defenses. CSPs and WAFs effectively mitigated Reflective and Stored XSS but required careful configuration to address DOM-based XSS.
+
